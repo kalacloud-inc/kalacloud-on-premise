@@ -1,0 +1,49 @@
+version: "3.7"
+services:
+  postgres:
+    container_name: postgres
+    image: postgres:12
+    env_file: docker.env
+    volumes:
+      - ./stack/db:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+
+  api:
+    container_name: kalacloud_api
+    image: 'registry.cn-beijing.aliyuncs.com/kalacloud/kalacloud-api:latest'
+    env_file: docker.env
+    ports:
+      - 8080:8080
+    depends_on:
+      - postgres
+    restart: always
+
+  client:
+    container_name: kalacloud_client
+    image: 'registry.cn-beijing.aliyuncs.com/kalacloud/kalacloud-client:latest'
+    env_file: docker.env
+    ports:
+      - 3000:80
+    depends_on:
+      - api
+
+  pgbackup:
+    container_name: pg_backup
+    image: prodrigestivill/postgres-backup-local
+    env_file: docker.env
+    restart: always
+    volumes:
+      - ./stack/backup:/backups
+    links:
+      - postgres:postgres
+    depends_on:
+      - postgres
+    environment:
+      - SCHEDULE=@every 10m
+      - HEALTHCHECK_PORT=81
+      - BACKUP_KEEP_DAYS=90
+      - BACKUP_KEEP_MINS=86400
+
+volumes:
+  stack:
